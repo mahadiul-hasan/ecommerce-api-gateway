@@ -1,6 +1,7 @@
 import axios, { AxiosInstance, AxiosRequestConfig } from "axios";
 import { Request } from "express";
 import config from "../config";
+import { logger } from "../utils/mongoLogger";
 
 class ServiceProxy {
 	private services: Map<string, AxiosInstance>;
@@ -24,7 +25,7 @@ class ServiceProxy {
 		// Request interceptor
 		instance.interceptors.request.use(
 			(config) => {
-				console.log(
+				logger.info(
 					`Proxying request to ${name} service: ${config.method?.toUpperCase()} ${
 						config.url
 					}`
@@ -40,7 +41,7 @@ class ServiceProxy {
 		instance.interceptors.response.use(
 			(response) => response,
 			(error) => {
-				console.error(`Error from ${name} service:`, error.message);
+				logger.error(`Error from ${name} service:`, error.message);
 				return Promise.reject(error);
 			}
 		);

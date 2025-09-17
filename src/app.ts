@@ -3,20 +3,40 @@ import cors from "cors";
 import helmet from "helmet";
 import morgan from "morgan";
 import rateLimit from "express-rate-limit";
-import { errorHandler } from "./middleware/errorHandler";
+import compression from "compression";
 import { notFoundHandler } from "./middleware/notFoundHandler";
+import { requestLogger, morganStream } from "./utils/mongoLogger";
 import routes from "./routes";
+import logManagementRoutes from "./routes/logManagement";
+import globalErrorHandler from "./middleware/globalErrorHandler";
+import { logCleanupService } from "./services/logCleanup";
 import config from "./config";
 
 const app = express();
 
 // Security middleware
-app.use(helmet());
+app.use(
+	helmet({
+		contentSecurityPolicy: {
+			directives: {
+				defaultSrc: ["'self'"],
+				styleSrc: ["'self'", "'unsafe-inline'"],
+				scriptSrc: ["'self'", "'unsafe-inline'"],
+			},
+		},
+		crossOriginEmbedderPolicy: false,
+	})
+);
 
 // CORS configuration
-app.use(
-	cors({
-		origin:
+const corsOptions = {
+	origin: (
+		origin: string | undefined,
+		callback: (err: Error | null, allow?: boolean) => void
+	) => {
+		if (!origin) return callback(null, true);
+
+		const allowedOrigins =
 			config.env === "production"
 				? [
 						"https://mshop.com",
@@ -27,13 +47,35 @@ app.use(
 						"http://localhost:3000",
 						"http://localhost:3001",
 						"http://localhost:3002",
-				  ],
-		credentials: true,
+				  ];
+
+		if (allowedOrigins.indexOf(origin) !== -1) {
+			callback(null, true);
+		} else {
+			callback(new Error("Not allowed by CORS"));
+		}
+	},
+	credentials: true,
+	optionsSuccessStatus: 200,
+};
+
+app.use(cors(corsOptions));
+
+// Compression for production
+if (config.env === "production") {
+	app.use(compression());
+}
+
+// Request logging
+app.use(requestLogger);
+
+// HTTP request logging with Morgan
+app.use(
+	morgan("combined", {
+		stream: morganStream,
+		skip: (req) => req.url === "/health",
 	})
 );
-
-// Logging
-app.use(morgan(config.env === "production" ? "combined" : "dev"));
 
 // Rate limiting
 const limiter = rateLimit({
@@ -44,7 +86,14 @@ const limiter = rateLimit({
 	},
 	standardHeaders: true,
 	legacyHeaders: false,
+	keyGenerator: (req) => {
+		return req.ip || req.connection.remoteAddress || "unknown";
+	},
+	skip: (req) => {
+		return req.url === "/health";
+	},
 });
+
 app.use(limiter);
 
 // Body parsing middleware
@@ -53,18 +102,38 @@ app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
 // Routes
 app.use("/api", routes);
+app.use("/api/admin/logs", logManagementRoutes);
 
 // Health check endpoint
-app.get("/health", (req, res) => {
-	res.status(200).json({
-		status: "OK",
-		timestamp: new Date().toISOString(),
-		uptime: process.uptime(),
-	});
+app.get("/health", async (req, res) => {
+	try {
+		const dbStats = await logCleanupService
+			.getDatabaseStats()
+			.catch(() => null);
+
+		res.status(200).json({
+			status: "OK",
+			timestamp: new Date().toISOString(),
+			uptime: process.uptime(),
+			environment: config.env,
+			database: dbStats
+				? {
+						totalLogs: dbStats.totalLogs,
+						oldestLog: dbStats.oldestLog,
+						newestLog: dbStats.newestLog,
+				  }
+				: "disconnected",
+		});
+	} catch (error) {
+		res.status(500).json({
+			status: "ERROR",
+			error: "Health check failed",
+		});
+	}
 });
 
 // Error handling
 app.use(notFoundHandler);
-app.use(errorHandler);
+app.use(globalErrorHandler);
 
 export default app;

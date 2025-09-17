@@ -1,10 +1,11 @@
 import axios from "axios";
 import { PERMISSIONS } from "../middleware/roles";
 import config from "../config";
+import { logger } from "../utils/mongoLogger";
 
 const seedPermissions = async () => {
 	try {
-		console.log("Seeding default permissions...");
+		logger.info("Seeding default permissions...");
 
 		const authServiceUrl = `${config.services.auth}/auth/seed-permissions`;
 
@@ -12,9 +13,9 @@ const seedPermissions = async () => {
 			permissions: Object.values(PERMISSIONS),
 		});
 
-		console.log("Permissions seeded successfully:", response.data);
+		logger.info("Permissions seeded successfully:", response.data);
 	} catch (error) {
-		console.error("Failed to seed permissions:", error);
+		logger.error("Failed to seed permissions:", error);
 	}
 };
 
