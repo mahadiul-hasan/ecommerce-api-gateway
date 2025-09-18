@@ -7,7 +7,6 @@ const router = Router();
 // ===== PUBLIC ROUTES =====
 // Auth routes
 router.post("/auth/login", proxyToService("auth"));
-router.post("/auth/register", proxyToService("auth"));
 router.post("/auth/refresh-token", proxyToService("auth"));
 router.post("/auth/forgot-password", proxyToService("auth"));
 router.post("/auth/reset-password", proxyToService("auth"));

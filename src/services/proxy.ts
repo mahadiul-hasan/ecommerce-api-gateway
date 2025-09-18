@@ -68,6 +68,7 @@ class ServiceProxy {
 				data: req.body,
 				headers: {
 					// Forward necessary headers
+					...req.headers,
 					authorization: req.headers.authorization,
 					"content-type": req.headers["content-type"],
 					accept: req.headers["accept"],
@@ -76,18 +77,44 @@ class ServiceProxy {
 					host: undefined,
 					"content-length": undefined,
 					connection: undefined,
+					cookie: req.headers.cookie,
 				},
+				withCredentials: true,
+				maxRedirects: 0, // Don't follow redirects automatically
 			};
 
 			const response = await instance.request(config);
-			return response.data;
+
+			// Return the full response object including headers and status
+			return {
+				status: response.status,
+				data: response.data,
+				headers: response.headers,
+			};
 		} catch (error: any) {
-			// Enhanced error handling
+			// Handle OAuth redirects (302 responses)
+			if (
+				error.response?.status === 302 &&
+				error.response.headers?.location
+			) {
+				return {
+					status: 302,
+					headers: {
+						location: error.response.headers.location,
+						// Forward other headers if needed
+						...error.response.headers,
+					},
+					data: null,
+				};
+			}
+
+			// Enhanced error handling for other cases
 			if (error.response) {
 				// Service responded with error status
 				throw {
 					status: error.response.status,
 					data: error.response.data,
+					headers: error.response.headers,
 					service,
 					path,
 				};
