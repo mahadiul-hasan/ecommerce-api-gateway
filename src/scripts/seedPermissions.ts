@@ -1,7 +1,7 @@
 import axios from "axios";
-import { PERMISSIONS } from "../middleware/roles";
 import config from "../config";
 import { logger } from "../utils/mongoLogger";
+import { PERMISSIONS } from "../utils/permissions";
 
 const seedPermissions = async () => {
 	try {

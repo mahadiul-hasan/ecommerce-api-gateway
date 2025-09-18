@@ -64,4 +64,4 @@ router.get("/retention", (req, res) => {
 	res.json({ retentionDays: (logCleanupService as any).cleanupDays });
 });
 
-export default router;
+export const LogManagementRoute = router;

@@ -7,7 +7,6 @@ import compression from "compression";
 import { notFoundHandler } from "./middleware/notFoundHandler";
 import { requestLogger, morganStream } from "./utils/mongoLogger";
 import routes from "./routes";
-import logManagementRoutes from "./routes/logManagement";
 import globalErrorHandler from "./middleware/globalErrorHandler";
 import { logCleanupService } from "./services/logCleanup";
 import config from "./config";
@@ -102,7 +101,6 @@ app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
 // Routes
 app.use("/api", routes);
-app.use("/api/admin/logs", logManagementRoutes);
 
 // Health check endpoint
 app.get("/health", async (req, res) => {
