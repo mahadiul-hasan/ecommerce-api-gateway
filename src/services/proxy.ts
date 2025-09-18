@@ -20,6 +20,7 @@ class ServiceProxy {
 		const instance = axios.create({
 			baseURL,
 			timeout: 10000,
+			withCredentials: true,
 		});
 
 		// Request interceptor
