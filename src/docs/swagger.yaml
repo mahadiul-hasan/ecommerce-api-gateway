@@ -1,0 +1,973 @@
+openapi: 3.0.3
+info:
+  title: API Gateway
+  description: API Gateway for Multivendor E-commerce Platform
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:5001/api
+    description: Local server
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+        email:
+          type: string
+        roles:
+          type: array
+          items:
+            type: string
+    Role:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+    Permission:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+    Customer:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+    Vendor:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+    Shop:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+    AuthTokens:
+      type: object
+      properties:
+        accessToken:
+          type: string
+        refreshToken:
+          type: string
+
+security:
+  - BearerAuth: []
+
+tags:
+  - name: Auth
+    description: Authentication endpoints
+  - name: Customer
+    description: Customer management
+  - name: Vendor
+    description: Vendor management
+  - name: Admin
+    description: Admin management
+  - name: System
+    description: System stats and health
+  - name: Logs
+    description: Log management
+
+paths:
+
+  # ==========================
+  # AUTH ROUTES
+  # ==========================
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Login user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                password:
+                  type: string
+      responses:
+        '200':
+          description: Successful login
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthTokens'
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/refresh-token:
+    post:
+      tags: [Auth]
+      summary: Refresh access token
+      responses:
+        '200':
+          description: Tokens refreshed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthTokens'
+
+  /auth/forgot-password:
+    post:
+      tags: [Auth]
+      summary: Forgot password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+      responses:
+        '200':
+          description: Email sent
+        '400':
+          description: Invalid email
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/reset-password:
+    post:
+      tags: [Auth]
+      summary: Reset password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                token:
+                  type: string
+                password:
+                  type: string
+      responses:
+        '200':
+          description: Password reset successful
+        '400':
+          description: Invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/logout:
+    post:
+      tags: [Auth]
+      summary: Logout user
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Successfully logged out
+
+  # ==========================
+  # OAUTH ROUTES
+  # ==========================
+  /oauth/google:
+    get:
+      tags: [Auth]
+      summary: Google OAuth login
+      responses:
+        '302':
+          description: Redirect to Google OAuth
+
+  /oauth/google/callback:
+    get:
+      tags: [Auth]
+      summary: Google OAuth callback
+      responses:
+        '200':
+          description: OAuth success
+        '401':
+          description: OAuth failure
+
+  # ==========================
+  # CUSTOMER ROUTES
+  # ==========================
+  /customer/register:
+    post:
+      tags: [Customer]
+      summary: Customer registration
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                email:
+                  type: string
+                password:
+                  type: string
+      responses:
+        '201':
+          description: Customer registered
+
+  /customer/profile:
+    get:
+      tags: [Customer]
+      summary: Get customer profile
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Profile data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Customer'
+    put:
+      tags: [Customer]
+      summary: Update customer profile
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Customer'
+      responses:
+        '200':
+          description: Profile updated
+    delete:
+      tags: [Customer]
+      summary: Delete customer profile
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Profile deleted
+
+  /customer/addresses:
+    get:
+      tags: [Customer]
+      summary: Get customer addresses
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Address list
+    post:
+      tags: [Customer]
+      summary: Add new address
+      security:
+        - BearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                street:
+                  type: string
+                city:
+                  type: string
+                postalCode:
+                  type: string
+      responses:
+        '201':
+          description: Address created
+
+  /customer/addresses/{id}:
+    put:
+      tags: [Customer]
+      summary: Update customer address
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                street:
+                  type: string
+                city:
+                  type: string
+                postalCode:
+                  type: string
+      responses:
+        '200':
+          description: Address updated
+    delete:
+      tags: [Customer]
+      summary: Delete customer address
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Address deleted
+
+  # ==========================
+  # VENDOR ROUTES
+  # ==========================
+  /vendor/register:
+    post:
+      tags: [Vendor]
+      summary: Vendor registration
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                email:
+                  type: string
+                password:
+                  type: string
+      responses:
+        '201':
+          description: Vendor registered
+
+  /vendor/profile:
+    get:
+      tags: [Vendor]
+      summary: Get vendor profile
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Vendor profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Vendor'
+    put:
+      tags: [Vendor]
+      summary: Update vendor profile
+      security:
+        - BearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Vendor'
+      responses:
+        '200':
+          description: Profile updated
+    delete:
+      tags: [Vendor]
+      summary: Delete vendor profile
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Profile deleted
+
+  /vendor/shops:
+    get:
+      tags: [Vendor]
+      summary: Get all vendor shops
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: List of shops
+    post:
+      tags: [Vendor]
+      summary: Create a new shop
+      security:
+        - BearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Shop'
+      responses:
+        '201':
+          description: Shop created
+
+  /vendor/shops/{id}:
+    get:
+      tags: [Vendor]
+      summary: Get single shop by ID
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Shop data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Shop'
+    put:
+      tags: [Vendor]
+      summary: Update shop
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Shop'
+      responses:
+        '200':
+          description: Shop updated
+    delete:
+      tags: [Vendor]
+      summary: Delete shop
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Shop deleted
+
+  /vendor/management-register:
+    post:
+      tags: [Vendor]
+      summary: Vendor management register
+      security:
+        - BearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '201':
+          description: Vendor management user created
+
+  # ==========================
+  # ADMIN ROUTES (Users, Roles, Permissions, Shops, Vendors)
+  # ==========================
+
+  /admin/users:
+    get:
+      tags: [Admin]
+      summary: Get all users
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: List of users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/User'
+
+  /admin/users/{id}:
+    get:
+      tags: [Admin]
+      summary: Get user by ID
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: User data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+    put:
+      tags: [Admin]
+      summary: Update user status
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+      responses:
+        '200':
+          description: User updated
+    delete:
+      tags: [Admin]
+      summary: Delete user
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: User deleted
+    /admin/shops:
+    get:
+      tags: [Admin]
+      summary: Get all shops
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: List of shops
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Shop'
+
+  /admin/shops/{id}:
+    get:
+      tags: [Admin]
+      summary: Get shop by ID
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Shop details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Shop'
+    put:
+      tags: [Admin]
+      summary: Update shop status
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+      responses:
+        '200':
+          description: Shop updated
+
+  /admin/vendors:
+    get:
+      tags: [Admin]
+      summary: Get all vendors
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: List of vendors
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Vendor'
+
+  /admin/vendors/{id}:
+    get:
+      tags: [Admin]
+      summary: Get vendor by ID
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Vendor details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Vendor'
+    put:
+      tags: [Admin]
+      summary: Update vendor status or approve/reject
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                action:
+                  type: string
+                  enum: [approve, reject]
+      responses:
+        '200':
+          description: Vendor updated
+
+  /admin/roles:
+    get:
+      tags: [Admin]
+      summary: Get all roles
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: List of roles
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Role'
+    post:
+      tags: [Admin]
+      summary: Create new role
+      security:
+        - BearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Role'
+      responses:
+        '201':
+          description: Role created
+
+  /admin/roles/{id}:
+    get:
+      tags: [Admin]
+      summary: Get role by ID
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Role details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Role'
+    put:
+      tags: [Admin]
+      summary: Update role
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Role'
+      responses:
+        '200':
+          description: Role updated
+    delete:
+      tags: [Admin]
+      summary: Delete role
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Role deleted
+
+  /admin/permissions:
+    get:
+      tags: [Admin]
+      summary: Get all permissions
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: List of permissions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Permission'
+    post:
+      tags: [Admin]
+      summary: Create permission
+      security:
+        - BearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Permission'
+      responses:
+        '201':
+          description: Permission created
+
+  /admin/permissions/{id}:
+    get:
+      tags: [Admin]
+      summary: Get permission by ID
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Permission details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Permission'
+    put:
+      tags: [Admin]
+      summary: Update permission
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Permission'
+      responses:
+        '200':
+          description: Permission updated
+    delete:
+      tags: [Admin]
+      summary: Delete permission
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Permission deleted
+
+  /admin/system/stats:
+    get:
+      tags: [System]
+      summary: Get system statistics
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: System stats
+
+  /admin/system/health:
+    get:
+      tags: [System]
+      summary: Get system health
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: System health
+
+  # ==========================
+  # LOG MANAGEMENT ROUTES
+  # ==========================
+  /logs/stats:
+    get:
+      tags: [Logs]
+      summary: Get database statistics for logs
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Database statistics
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  totalLogs:
+                    type: integer
+                  services:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        service:
+                          type: string
+                        count:
+                          type: integer
+        '500':
+          description: Internal server error
+
+  /logs/cleanup:
+    post:
+      tags: [Logs]
+      summary: Cleanup old logs manually
+      security:
+        - BearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                days:
+                  type: integer
+                  description: Number of days to keep logs
+                service:
+                  type: string
+                  description: Optional service name to clean logs for
+      responses:
+        '200':
+          description: Cleanup result
+        '500':
+          description: Internal server error
+
+  /logs/retention:
+    get:
+      tags: [Logs]
+      summary: Get current log retention period
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Retention period
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  retentionDays:
+                    type: integer
+        '500':
+          description: Internal server error
+    put:
+      tags: [Logs]
+      summary: Update log retention period
+      security:
+        - BearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                days:
+                  type: integer
+                  description: Number of days to keep logs
+                  example: 30
+      responses:
+        '200':
+          description: Retention period updated
+        '400':
+          description: Invalid days parameter
+        '500':
+          description: Internal server error
